@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract jookStaking is Ownable  {
+contract JookStaking {
     using SafeERC20 for IERC20;
 
     uint256 public totalStakedAmount;
@@ -38,25 +37,21 @@ contract jookStaking is Ownable  {
         uint256 userClaimedAmount
     );
 
-    bool isInitialized;
-
-    constructor(address _TokenAddress, uint64  _tokenDecimal
-)  {
-        // require(!isInitialized, "Already initialized");
-        // isInitialized = true;
-        // _setOwner(_owner);
-        TokenAddress = _TokenAddress;
-        tokenDecimal = _tokenDecimal;
+    constructor() {
+        TokenAddress = 0x26f9111a358385dc46A832CF1a1A021Ee72E58A1;
+        tokenDecimal = 18;
         monthly = 28 days;
-        // monthly = 60;
     }
-
 
     //    ***************************************     FUNCTION    FOR     STAKING       ****************************************
 
-    function staking(uint32 _type, uint128 _amount) public {
-        //_type ==1 ==> staking for 6 months = 180 days
-        //_type==2  ==> staking for 12 months = 360 days
+    function stake(uint32 _type, uint128 _amount) public {
+        //_type ==1 ==>  28 days
+        //_type==2  ==>  28*2 days
+        //_type==3  ==>  28*3 days
+        require(_type >= 1 && _type <= 3, "Invalid staking type");
+        require(_amount > 0, "Staking amount must be greater than 0");
+
         require(
             IERC20(TokenAddress).allowance(msg.sender, address(this)) >=
                 _amount,
@@ -66,6 +61,7 @@ contract jookStaking is Ownable  {
             IERC20(TokenAddress).balanceOf(msg.sender) > _amount,
             " user dont have enough balance"
         );
+
         userData storage uData = userMapping[msg.sender][
             userStakeId[msg.sender]
         ];
@@ -95,11 +91,9 @@ contract jookStaking is Ownable  {
 
     //    ****************************************   FOR  CLAIM TIME DETAILS   ********************************************
 
-    function claimDetails(uint32 _stakeId)
-        public
-        view
-        returns (uint128, uint128)
-    {
+    function claimDetails(
+        uint32 _stakeId
+    ) public view returns (uint128, uint128) {
         userData memory uData = userMapping[msg.sender][_stakeId];
         require(
             block.timestamp >
@@ -123,17 +117,17 @@ contract jookStaking is Ownable  {
         );
         if (uData.stakingType == 1) {
             totalAmount = uint128(
-                (uData.stakedAmount * (125**count)) / (100**count)
+                (uData.stakedAmount * (125 ** count)) / (100 ** count)
             );
             return totalAmount;
         } else if (uData.stakingType == 2) {
             totalAmount = uint128(
-                (uData.stakedAmount * (160**count)) / (100**count)
+                (uData.stakedAmount * (160 ** count)) / (100 ** count)
             );
             return totalAmount;
-        }else{
-             totalAmount = uint128(
-                (uData.stakedAmount * (215**count)) / (100**count)
+        } else {
+            totalAmount = uint128(
+                (uData.stakedAmount * (215 ** count)) / (100 ** count)
             );
             return totalAmount;
         }
@@ -144,8 +138,7 @@ contract jookStaking is Ownable  {
     function claim(uint32 _stakeId) public {
         userData storage uData = userMapping[msg.sender][_stakeId];
         require(
-            block.timestamp >
-                (uData.stakingTime + monthly * uData.stakingType),
+            block.timestamp > (uData.stakingTime + monthly * uData.stakingType),
             " Staking period is still going  on"
         );
         require(uData.claimed == false, " user has already claimed");
